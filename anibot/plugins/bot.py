@@ -58,10 +58,10 @@ async def en_dis__able_cmd(client: Client, message: Message):
             await asyncio.sleep(5)
             await x.delete()
             return
-        enable = False if not 'enable' in cmd[0] else True
+        enable = 'enable' in cmd[0]
         if set(cmd[1].split()).issubset(CMD):
             find_gc = await DC.find_one({'_id': gid})
-            if find_gc==None:
+            if find_gc is None:
                 if enable:
                     x = await message.reply_text('Command already enabled!!!')
                     await asyncio.sleep(5)
@@ -69,9 +69,6 @@ async def en_dis__able_cmd(client: Client, message: Message):
                     return
                 await DC.insert_one({'_id': gid, 'cmd_list': cmd[1]})
                 x = await message.reply_text("Command disabled!!!")
-                await asyncio.sleep(5)
-                await x.delete()
-                return
             else:
                 ocls: str = find_gc['cmd_list']
                 if set(cmd[1].split()).issubset(ocls.split()):
@@ -91,24 +88,26 @@ async def en_dis__able_cmd(client: Client, message: Message):
                         await asyncio.sleep(5)
                         await x.delete()
                         return
+                elif enable:
+                    x = await message.reply_text('Command already enabled!!!')
+                    await asyncio.sleep(5)
+                    await x.delete()
+                    return
                 else:
-                    if enable:
-                        x = await message.reply_text('Command already enabled!!!')
-                        await asyncio.sleep(5)
-                        await x.delete()
-                        return
-                    else:
-                        lsncls = []
-                        prencls = (ocls+' '+cmd[1]).replace('  ', ' ')
-                        for i in prencls.split():
-                            if i not in lsncls:
-                                lsncls.append(i)
-                        ncls = " ".join(lsncls)
+                    lsncls = []
+                    prencls = (ocls+' '+cmd[1]).replace('  ', ' ')
+                    for i in prencls.split():
+                        if i not in lsncls:
+                            lsncls.append(i)
+                    ncls = " ".join(lsncls)
                 await DC.update_one({'_id': gid}, {'$set': {'cmd_list': ncls}})
-                x = await message.reply_text(f"Command {'dis' if enable==False else 'en'}abled!!!")
-                await asyncio.sleep(5)
-                await x.delete()
-                return
+                x = await message.reply_text(
+                    f'Command {"dis" if not enable else "en"}abled!!!'
+                )
+
+            await asyncio.sleep(5)
+            await x.delete()
+            return
         else:
             await message.reply_text("Hee, is that a command?!")
 
@@ -117,7 +116,7 @@ async def en_dis__able_cmd(client: Client, message: Message):
 @control_user
 async def list_disabled(client: Client, message: Message):
     find_gc = await DC.find_one({'_id': message.chat.id})
-    if find_gc==None:
+    if find_gc is None:
         await message.reply_text("No commands disabled in this group!!!")
     else:
         lscmd = find_gc['cmd_list'].replace(" ", "\n")
@@ -249,7 +248,7 @@ async def start_(client: Client, message: Message):
     bot = await client.get_me()
     if gid==user:
         usertitle = message.from_user.username or message.from_user.first_name
-        if not (user in OWNER) and not (await USERS.find_one({"id": user})):
+        if user not in OWNER and not (await USERS.find_one({"id": user})):
             await USERS.insert_one({"id": user, "user": usertitle})
             await clog("ANIBOT", f"New User started bot\n\n[{usertitle}](tg://user?id={user})\nID: `{user}`", "NEW_USER")
         if len(message.text.split())!=1:
@@ -307,15 +306,14 @@ Use /feedback cmd to contact bot owner'''
 
 Apart from above shown cmds"""
         )
+    elif gid==id_:
+        await client.send_message(gid, text=text, reply_markup=buttons)
     else:
-        if gid==id_:
-            await client.send_message(gid, text=text, reply_markup=buttons)
-        else:
-            await client.send_message(
-                gid,
-                text="Click below button for bot help",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Help", url=f"https://t.me/{bot_us}/?start=help")]])
-            )
+        await client.send_message(
+            gid,
+            text="Click below button for bot help",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Help", url=f"https://t.me/{bot_us}/?start=help")]])
+        )
 
 
 @Client.on_callback_query(filters.regex(pattern=r"help_(.*)"))
@@ -350,7 +348,7 @@ def help_btns(user):
         if len(but_rc)==2:
             buttons.append(but_rc)
             but_rc = []
-    if len(but_rc)!=0:
+    if but_rc:
         buttons.append(but_rc)
     return InlineKeyboardMarkup(buttons)
 

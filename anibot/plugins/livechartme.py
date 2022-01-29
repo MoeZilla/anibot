@@ -19,10 +19,10 @@ async def livechart_parser():
     print('Parsing data from rss')
     da = bs(requests.get(url_a).text, features="html.parser")
     db = bs(requests.get(url_b).text, features="html.parser")
-    if (await A.find_one())==None:
+    if await A.find_one() is None:
         await A.insert_one({'_id': str(da.find('item').find('title'))})
         return
-    if (await B.find_one())==None:
+    if await B.find_one() is None:
         await B.insert_one({'_id': str(db.find('item').find('title'))})
         return
     count_a = 0
@@ -31,8 +31,6 @@ async def livechart_parser():
     msgscr = []
     lc = []
     cr = []
-
-
 #### LiveChart.me ####
     clc = defaultdict(list)
     for i in da.findAll("item"):
@@ -56,8 +54,6 @@ async def livechart_parser():
             text = f'\nEpisode {clc[i][0][0]} of {i} just aired'
         msgslc.append([text, clc[i][0][1]])
 ######################
-
-
 #### CrunchyRoll.com ####
     clc = defaultdict(list)
     fk = []
@@ -83,7 +79,12 @@ async def livechart_parser():
         hmm = []
         for ii in clc[i]:
             hmm.append(ii[0].split()[1])
-        msgscr.append([f"**New anime released on Crunchyroll**\n\n**Title:** {i}\n**Episode:** {hmm[len(hmm)-1]+' - '+hmm[0] if len(hmm)!=1 and hmm[len(hmm)-1]!=hmm[0] else hmm[0]}\n{'**EP Title:** '+ii[1] if len(ii)==3 else ''}", ii[1] if len(ii)!=3 else ii[2]])
+        msgscr.append(
+            [
+                f'**New anime released on Crunchyroll**\n\n**Title:** {i}\n**Episode:** {hmm[-1] + " - " + hmm[0] if len(hmm)!=1 and hmm[-1] != hmm[0] else hmm[0]}\n{"**EP Title:** "+ii[1] if len(ii)==3 else ""}',
+                ii[1] if len(ii) != 3 else ii[2],
+            ]
+        )
 #########################
 
     print('Notifying Livechart.me airings!!!')

@@ -129,9 +129,7 @@ async def character_cmd(client: Client, message: Message):
     gid = message.chat.id
     gidtype = message.chat.type
     gidtitle = message.chat.username or message.chat.title
-    user = gid
-    if gidtype in ["supergroup", "group"]:
-        user = message.from_user.id
+    user = message.from_user.id if gidtype in ["supergroup", "group"] else gid
     if gidtype in ["supergroup", "group"] and not await (GROUPS.find_one({"id": gid})):
         await GROUPS.insert_one({"id": gid, "grp": gidtitle})
         await clog("ANIBOT", f"Bot added to a new group\n\n{gidtitle}\nID: `{gid}`", "NEW_GROUP")
@@ -145,9 +143,7 @@ async def character_cmd(client: Client, message: Message):
     query = text[1]
     qdb = rand_key()
     CHAR_DB[qdb]=query
-    auth = False
-    if (await AUTH_USERS.find_one({"id": user})):
-        auth = True
+    auth = bool((await AUTH_USERS.find_one({"id": user})))
     result = await get_character(qdb, 1, auth=auth, user=user)
     if len(result) == 1:
         k = await message.reply_text(result[0])
@@ -175,9 +171,7 @@ async def anilist_cmd(client: Client, message: Message):
     query = text[1]
     qdb = rand_key()
     ANIME_DB[qdb] = query
-    auth = False
-    if (await AUTH_USERS.find_one({"id": user})):
-        auth = True
+    auth = bool((await AUTH_USERS.find_one({"id": user})))
     result = await get_anilist(qdb, 1, auth=auth, user=user)
     if len(result) == 1:
         k = await message.reply_text(result[0])
@@ -202,7 +196,7 @@ async def flex_cmd(client: Client, message: Message):
     if "user" in query[0]:
         if find_gc!=None and 'user' in find_gc['cmd_list'].split():
             return
-        if not len(query)==2:
+        if len(query) != 2:
             k = await message.reply_text("Please give an anilist username to search about\nexample: /user Lostb053")
             await asyncio.sleep(5)
             return await k.delete()
@@ -211,7 +205,9 @@ async def flex_cmd(client: Client, message: Message):
     if find_gc!=None and 'flex' in find_gc['cmd_list'].split():
         return
     user = message.from_user.id
-    if not "user" in query[0] and not (await AUTH_USERS.find_one({"id": user})):
+    if "user" not in query[0] and not (
+        await AUTH_USERS.find_one({"id": user})
+    ):
         bot_us = (await client.get_me()).username
         return await message.reply_text(
             "Please connect your account first to use this cmd",
@@ -234,9 +230,7 @@ async def top_tags_cmd(client: Client, message: Message):
     find_gc = await DC.find_one({'_id': gid})
     if find_gc!=None and 'top' in find_gc['cmd_list'].split():
         return
-    get_tag = "None"
-    if len(query)==2:
-        get_tag = query[1]
+    get_tag = query[1] if len(query)==2 else "None"
     user = message.from_user.id
     result = await get_top_animes(get_tag, 1, user)
     if len(result) == 1:
@@ -754,7 +748,7 @@ async def additional_info_btn(client: Client, cq: CallbackQuery):
         button.append([InlineKeyboardButton(text="View spoiler", url=f"https://t.me/{bot}/?start=des_{ctgry}_{query}")])
     if len(result) > 1000:
         result = result[:940] + "..."
-        if spoiler==False:
+        if not spoiler:
             result += "\n\nFor more info click below given button"
             button.append([InlineKeyboardButton(text="More Info", url=f"https://t.me/{bot}/?start=des_{ctgry}_{query}")])
     add_ = ""
@@ -791,9 +785,9 @@ async def featured_in_btn(client, cq: CallbackQuery):
     if result[0]==False:
         result = await get_featured_in_lists(int(idm), "MAN")
         req = None
-        if result[0]==False:
-            await cq.answer("No Data Available!!!")
-            return
+    if result[0]==False:
+        await cq.answer("No Data Available!!!")
+        return
     [msg, total], pic = result
     button = []
     totalpg, kek = divmod(total, 15)
